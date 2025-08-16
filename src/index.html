@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Progreso Nutricional</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Tu Progreso Nutricional</h1>
+
+    <!-- Sección de comidas -->
+    <h2>Comidas del día</h2>
+    <ul id="meal-list">
+      <li><label><input type="checkbox" data-meal="desayuno"> Desayuno</label></li>
+      <li><label><input type="checkbox" data-meal="colacion1"> Colación Mañana</label></li>
+      <li><label><input type="checkbox" data-meal="almuerzo"> Almuerzo</label></li>
+      <li><label><input type="checkbox" data-meal="colacion2"> Colación Tarde</label></li>
+      <li><label><input type="checkbox" data-meal="once"> Once</label></li>
+      <li><label><input type="checkbox" data-meal="colacion3"> Colación Nocturna (opcional)</label></li>
+    </ul>
+
+    <!-- Barra de progreso -->
+    <h2>Progreso</h2>
+    <div class="progress-bar">
+      <div class="progress" id="progress"></div>
+    </div>
+    <p id="progress-text">0% completado</p>
+
+    <!-- Racha -->
+    <h2>Racha</h2>
+    <p id="streak">🔥 0 días seguidos</p>
+
+    <!-- Mensajes motivacionales -->
+    <h2>Motivación</h2>
+    <p id="tip">Marca tus comidas para ver tu progreso 💪</p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
