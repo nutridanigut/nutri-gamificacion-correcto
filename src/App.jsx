@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import "./style.css";
 
 /** ----- Datos base ----- */
 const ALL_MEALS = [
@@ -12,13 +13,11 @@ const ALL_MEALS = [
 
 const TIPS_LOW  = ["🌱 Pequeños pasos → grandes cambios", "💧 Hidrátate durante el día", "🧠 Si fallas hoy, retoma mañana", "🍎 Suma 1 fruta hoy"];
 const TIPS_HIGH = ["💪 ¡Excelente constancia!", "🥗 Varía colores/vegetales", "🚶‍♀️ Suma 10–15’ de movimiento", "🧩 Mantén tu racha, vas genial"];
-const WEEK_LABELS = ["D", "L", "M", "M", "J", "V", "S"]; // dom..sáb
+const WEEK_LABELS = ["D", "L", "M", "M", "J", "V", "S"];
 
-/** ----- Utilidades ----- */
 const todayKey  = () => new Date().toDateString();
 const todayIdx  = () => new Date().getDay();
 const hhmmToMin = (t) => { const [h,m] = t.split(":").map(Number); return h*60+m; };
-
 function getMedal(streak) {
   if (streak >= 30) return { name: "Oro",   emoji: "🥇", need: 30 };
   if (streak >= 14) return { name: "Plata", emoji: "🥈", need: 14 };
@@ -26,36 +25,81 @@ function getMedal(streak) {
   return null;
 }
 
-/** ----- Mascota: importa imágenes ----- */
-import osito1 from "./assets/mascota/osito1.png";
-import osito2 from "./assets/mascota/osito2.png";
-import osito3 from "./assets/mascota/osito3.png";
-import osito4 from "./assets/mascota/osito4.png";
+/** ----- Spritesheets (por ahora: 2 de prueba) ----- */
+import ositoSheet from "./assets/mascota/osito_sheet.png";
+import humanoSheet from "./assets/mascota/humano_sheet.png";
 
-/** Mapea racha → nivel 1..4 */
-function streakToLevel(streak) {
-  if (streak < 3)  return 1;   // inicio
-  if (streak < 7)  return 2;   // mejora
-  if (streak < 14) return 3;   // fuerte
-  return 4;                    // maestro
+/** Mapa por racha → spritesheet (cambia rutas cuando tengas artes por etapa) */
+const SHEETS = {
+  base: ositoSheet,
+  d3:   ositoSheet,
+  d7:   ositoSheet,
+  d10:  ositoSheet,
+  d14:  ositoSheet,
+  d15:  humanoSheet,
+  d18:  humanoSheet,
+  d21:  humanoSheet,
+};
+
+const SPRITE_FRAMES = 8;
+const FRAME_W = 256;
+const FRAME_H = 256;
+const SPRITE_FPS = 8;
+
+function streakToKey(streak) {
+  if (streak >= 21) return "d21";
+  if (streak >= 18) return "d18";
+  if (streak >= 15) return "d15";
+  if (streak >= 14) return "d14";
+  if (streak >= 10) return "d10";
+  if (streak >= 7)  return "d7";
+  if (streak >= 3)  return "d3";
+  return "base";
 }
 
-/** ----- Componente ----- */
+/** ----- Sprite animado ----- */
+function Sprite({ sheet, frames = SPRITE_FRAMES, w = FRAME_W, h = FRAME_H, fps = SPRITE_FPS, play = true }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (!play) return;
+    const id = setInterval(() => setIdx(i => (i + 1) % frames), 1000 / fps);
+    return () => clearInterval(id);
+  }, [frames, fps, play]);
+
+  return (
+    <div
+      className="sprite"
+      style={{
+        width: w,
+        height: h,
+        backgroundImage: `url(${sheet})`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: `${w * frames}px ${h}px`,
+        backgroundPosition: `-${idx * w}px 0px`,
+      }}
+    />
+  );
+}
+
+/** ----- App ----- */
 export default function App() {
-  /** Tema (claro/oscuro) */
+  /** Tema */
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   useEffect(() => {
     localStorage.setItem("theme", dark ? "dark" : "light");
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   }, [dark]);
 
-  /** Modo Pro (config oculta). Activas con ?pro=1 o con el switch */
+  /** Modo Pro + Simulación */
   const [proMode, setProMode] = useState(() => {
     const url = new URL(window.location.href);
     if (url.searchParams.get("pro") === "1") { localStorage.setItem("proMode","1"); return true; }
     return localStorage.getItem("proMode") === "1";
   });
   useEffect(() => { proMode ? localStorage.setItem("proMode","1") : localStorage.removeItem("proMode"); }, [proMode]);
+
+  const [simulate, setSimulate] = useState(() => localStorage.getItem("proSim") === "1");
+  useEffect(() => { simulate ? localStorage.setItem("proSim","1") : localStorage.removeItem("proSim"); }, [simulate]);
 
   /** Qué comidas cuentan */
   const [enabledMeals, setEnabledMeals] = useState(() => {
@@ -75,7 +119,7 @@ export default function App() {
   });
   useEffect(() => localStorage.setItem("mealTimes", JSON.stringify(mealTimes)), [mealTimes]);
 
-  /** Estado de hoy: comidas hechas */
+  /** Comidas hechas (día) */
   const [mealsDone, setMealsDone] = useState(() => {
     const savedMeals = localStorage.getItem("mealsDone");
     const savedDate  = localStorage.getItem("mealsDate");
@@ -131,7 +175,7 @@ export default function App() {
     : streak >= 7  ? { name: "Plata", need: 14 }
     : { name: "Bronce", need: 7 };
 
-  /** Guardar semanal al cambiar % */
+  /** Guardar semanal */
   useEffect(() => {
     const idx = todayIdx();
     const arr = [...weeklyData];
@@ -140,8 +184,9 @@ export default function App() {
     localStorage.setItem("weeklyData", JSON.stringify(arr));
   }, [percent]); // eslint-disable-line
 
-  /** Racha + puntos (1 vez por día al alcanzar meta) */
+  /** Racha + puntos (solo si NO está en simulación) */
   useEffect(() => {
+    if (simulate) return;
     const today = todayKey();
     const lastCounted = localStorage.getItem("lastDay");
     if (percent >= goal && lastCounted !== today) {
@@ -153,9 +198,9 @@ export default function App() {
       localStorage.setItem("points", String(newPoints));
       localStorage.setItem("lastDay", today);
     }
-  }, [percent, goal, streak, points]);
+  }, [percent, goal, streak, points, simulate]);
 
-  /** Recordatorios internos (mientras app abierta) */
+  /** Recordatorios internos */
   const [pendingMeals, setPendingMeals] = useState([]);
   const [dismissToday, setDismissToday] = useState(() => localStorage.getItem("dismissReminders") === todayKey());
   useEffect(() => {
@@ -184,7 +229,7 @@ export default function App() {
     localStorage.setItem("dismissReminders", todayKey());
   }
 
-  /** Handlers */
+  /** Presets + handlers */
   function toggleEnabled(key) { setEnabledMeals(e => ({ ...e, [key]: !e[key] })); }
   function toggleDone(key)    { setMealsDone(d => ({ ...d, [key]: !d[key] })); }
   function resetToday() {
@@ -201,22 +246,30 @@ export default function App() {
     setEnabledMeals(full);
   }
 
-  /** ----- Mascota: nivel y animación de rebote ----- */
-  const level = useMemo(() => streakToLevel(streak), [streak]);
-  const prevLevelRef = useRef(level);
-  const [bounce, setBounce] = useState(false);
-  const mascotSrc = useMemo(() => {
-    return [osito1, osito2, osito3, osito4][level - 1];
-  }, [level]);
+  /** --- Evolución por racha + movimiento por % --- */
+  const evoKey = streakToKey(streak);
+  const sheet = SHEETS[evoKey] || SHEETS.base;
+  const trackProgressStyle = { "--p": percent };
 
-  useEffect(() => {
-    if (prevLevelRef.current !== level) {
-      setBounce(true);
-      const t = setTimeout(() => setBounce(false), 800);
-      prevLevelRef.current = level;
-      return () => clearTimeout(t);
-    }
-  }, [level]);
+  /** --- Simuladores (solo UI) --- */
+  const [simStreak, setSimStreak] = useState(streak);
+  const [simPercent, setSimPercent] = useState(percent);
+
+  // Aplica simulación a estado real
+  function applySimulation() {
+    setStreak(simStreak);
+    localStorage.setItem("streak", String(simStreak));
+    // porcentaje simulado solo para la pista (no altera comidas); lo forzamos visualmente:
+    // Para visualizar, marcamos comidas equivalentes (aprox).
+    const total = Math.max(1, ALL_MEALS.filter(m => enabledMeals[m.key]).length);
+    const need = Math.round((simPercent / 100) * total);
+    const actives = ALL_MEALS.filter(m => enabledMeals[m.key]).map(m => m.key);
+    const newDone = ALL_MEALS.reduce((acc, m, i) => {
+      acc[m.key] = actives.includes(m.key) && i < need;
+      return acc;
+    }, {});
+    setMealsDone(newDone);
+  }
 
   return (
     <div className="container">
@@ -245,24 +298,47 @@ export default function App() {
       <div className="card mascota-card">
         <h2>🐻 Tu Mascota</h2>
         <div className="mascota-box">
-          <img
-            src={mascotSrc}
-            alt="Osito"
-            className={`mascota-img ${bounce ? "bounce" : ""}`}
-          />
+          {/* “Retrato”: frame 0 del sheet */}
+          <div className="portrait">
+            <div
+              className="sprite"
+              style={{
+                width: 160, height: 160,
+                backgroundImage: `url(${sheet})`,
+                backgroundSize: `${160 * SPRITE_FRAMES}px 160px`,
+                backgroundPosition: `0px 0px`,
+              }}
+            />
+          </div>
           <div className="mascota-info">
-            <div className="mascota-level">Nivel {level}</div>
+            <div className="mascota-level">Racha: {streak} días</div>
             <div className="mascota-note">
-              {level === 1 && "Tu osito está despertando ✨"}
-              {level === 2 && "Tu osito se ve más feliz 😃"}
-              {level === 3 && "Tu osito está fuerte 💪"}
-              {level >= 4 && "¡Osito maestro de la salud! 🏆"}
+              {evoKey === "base" && "Tu osito está despertando ✨"}
+              {evoKey === "d3"  && "💥 Primer power-up: abdomen"}
+              {evoKey === "d7"  && "🛡️ Armadura activada"}
+              {evoKey === "d10" && "⚔️ Casco + espada"}
+              {evoKey === "d14" && "🛡️🔒 Oculto en armadura"}
+              {evoKey === "d15" && "🧍 Transición a humano"}
+              {evoKey === "d18" && "💪 Tonificación visible"}
+              {evoKey === "d21" && "🏆 Abdomen marcado (leyenda)"}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Configuración (Modo Pro) */}
+      {/* PISTA: camina según % del día */}
+      <div className="card">
+        <h2>🚶 Progreso del día (tu personaje camina)</h2>
+        <div className="track">
+          <div className="track-fill" style={{ width: `${percent}%` }} />
+          <div className="walker" style={trackProgressStyle}>
+            <Sprite sheet={sheet} frames={SPRITE_FRAMES} w={64} h={64} fps={SPRITE_FPS} play={true} />
+          </div>
+        </div>
+        <p className="strong">{percent}% del día</p>
+      </div>
+
+      {/* ----- Configuración & Simuladores (Modo Pro) ----- */}
       {proMode && (
         <div className="card">
           <h2>⚙️ Configuración (solo profesional)</h2>
@@ -313,6 +389,46 @@ export default function App() {
               <p className="muted">Mostrará un aviso durante ~90 min desde la hora señalada.</p>
             </div>
           </div>
+
+          <hr style={{ opacity: .2, margin: "12px 0" }} />
+
+          <div className="row" style={{ gap: 16, alignItems: "flex-end" }}>
+            <div>
+              <h3>🧪 Simulación</h3>
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={simulate}
+                  onChange={(e) => setSimulate(e.target.checked)}
+                />
+                Pausar auto-rachas (usar controles manuales)
+              </label>
+            </div>
+
+            <div>
+              <label>Racha (días):&nbsp;</label>
+              <input
+                type="number"
+                min={0}
+                value={simStreak}
+                onChange={(e)=>setSimStreak(Math.max(0, Number(e.target.value||0)))}
+              />
+              <button className="chip" onClick={()=>setSimStreak(s=>s+1)}>+1</button>
+              <button className="chip" onClick={()=>setSimStreak(s=>Math.max(0,s-1))}>-1</button>
+            </div>
+
+            <div>
+              <label>Progreso %:&nbsp;</label>
+              <input
+                type="number"
+                min={0} max={100}
+                value={simPercent}
+                onChange={(e)=>setSimPercent(Math.min(100, Math.max(0, Number(e.target.value||0))))}
+              />
+            </div>
+
+            <button className="btn" onClick={applySimulation}>Aplicar simulación</button>
+          </div>
         </div>
       )}
 
@@ -340,7 +456,7 @@ export default function App() {
         <button className="btn" onClick={resetToday}>Reiniciar día</button>
       </div>
 
-      {/* Progreso */}
+      {/* Progreso numérico */}
       <div className="card">
         <h2>📊 Progreso diario</h2>
         <div className="progress-bar">
