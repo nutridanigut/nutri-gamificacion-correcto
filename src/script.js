@@ -1,78 +1,57 @@
-// Guardar comidas marcadas y progreso en localStorage
-const meals = document.querySelectorAll(".meal");
-const progressBar = document.getElementById("progressBar");
-const progressText = document.getElementById("progressText");
-const reinforcement = document.getElementById("reinforcement");
-const streakEl = document.getElementById("streak");
-const rewardEl = document.getElementById("reward");
+// Guardar progreso en localStorage
+const checkboxes = document.querySelectorAll("input[type=checkbox]");
+const progressBar = document.getElementById("progress");
+const progressText = document.getElementById("progress-text");
+const streakText = document.getElementById("streak");
+const tipText = document.getElementById("tip");
+
+let streak = localStorage.getItem("streak") ? parseInt(localStorage.getItem("streak")) : 0;
+let lastDate = localStorage.getItem("lastDate");
+
 const tips = [
-  "Toma suficiente agua durante el día 💧",
-  "Come frutas y verduras de colores distintos 🌈",
-  "Muévete al menos 15 minutos diarios 🚶‍♂️",
-  "No te castigues por un día difícil, sigue adelante 💪",
-  "Recuerda: pequeños cambios logran grandes resultados 🌟"
+  "¡Sigue así! Cada comida saludable cuenta 💪",
+  "Recuerda hidratarte durante el día 💧",
+  "Pequeños pasos llevan a grandes cambios 🌱",
+  "La constancia es tu mejor aliada 🔑"
 ];
 
-let streak = localStorage.getItem("streak") || 0;
-let weeklyData = JSON.parse(localStorage.getItem("weeklyData")) || [0,0,0,0,0,0,0];
-
-// Mostrar tip aleatorio
-document.getElementById("dailyTip").innerText = tips[Math.floor(Math.random()*tips.length)];
-
-// Manejo de comidas
-meals.forEach(meal => {
-  meal.addEventListener("change", updateProgress);
+// Cargar estado de checkboxes
+checkboxes.forEach(cb => {
+  const saved = localStorage.getItem(cb.dataset.meal);
+  if (saved === "true") cb.checked = true;
 });
 
-// Actualizar progreso
+updateProgress();
+
+// Evento cuando se marca una comida
+checkboxes.forEach(cb => {
+  cb.addEventListener("change", () => {
+    localStorage.setItem(cb.dataset.meal, cb.checked);
+    updateProgress();
+  });
+});
+
 function updateProgress() {
-  const total = meals.length;
-  const checked = document.querySelectorAll(".meal:checked").length;
+  const total = checkboxes.length;
+  const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
   const percent = Math.round((checked / total) * 100);
 
-  progressBar.value = percent;
-  progressText.innerText = `${percent}% completado`;
+  progressBar.style.width = percent + "%";
+  progressText.textContent = percent + "% completado";
 
-  reinforcement.innerText = checked > 0 ? "¡Bien hecho, sigue así! 🎉" : "👉 Marca tus comidas para avanzar";
+  // Tips motivacionales aleatorios
+  if (checked > 0) {
+    tipText.textContent = tips[Math.floor(Math.random() * tips.length)];
+  }
 
-  // Si completó el 100%, actualizar racha
-  if (percent === 100) {
-    streak++;
-    localStorage.setItem("streak", streak);
-    streakEl.innerText = `${streak} días seguidos cumpliendo la meta`;
-
-    if (streak >= 5) {
-      rewardEl.style.display = "block";
+  // Rachas
+  const today = new Date().toDateString();
+  if (checked === total) {
+    if (lastDate !== today) {
+      streak++;
+      localStorage.setItem("streak", streak);
+      localStorage.setItem("lastDate", today);
     }
-  } else {
-    streak = 0;
-    localStorage.setItem("streak", streak);
-    streakEl.innerText = "0 días seguidos cumpliendo la meta";
-    rewardEl.style.display = "none";
   }
-
-  // Guardar progreso en el día actual (0 = domingo)
-  const today = new Date().getDay();
-  weeklyData[today] = percent;
-  localStorage.setItem("weeklyData", JSON.stringify(weeklyData));
-  updateWeeklyChart();
-}
-
-// Graficar progreso semanal
-const ctx = document.getElementById("weeklyChart").getContext("2d");
-let chart = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels: ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"],
-    datasets: [{
-      label: "Progreso (%)",
-      data: weeklyData,
-      backgroundColor: "rgba(75,192,192,0.6)"
-    }]
-  }
-});
-
-function updateWeeklyChart() {
-  chart.data.datasets[0].data = weeklyData;
-  chart.update();
+  streakText.textContent = "🔥 " + streak + " días seguidos";
 }
