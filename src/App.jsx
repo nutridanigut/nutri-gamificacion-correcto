@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /** ----- Datos base ----- */
 const ALL_MEALS = [
@@ -11,13 +11,12 @@ const ALL_MEALS = [
 ];
 
 const TIPS_LOW  = ["🌱 Pequeños pasos → grandes cambios", "💧 Hidrátate durante el día", "🧠 Si fallas hoy, retoma mañana", "🍎 Suma 1 fruta hoy"];
-const TIPS_HIGH = ["💪 ¡Excelente constancia!", "🥗 Prueba variar colores/vegetales", "🚶‍♀️ Suma 10–15’ de movimiento", "🧩 Mantén tu racha, vas genial"];
-
+const TIPS_HIGH = ["💪 ¡Excelente constancia!", "🥗 Varía colores/vegetales", "🚶‍♀️ Suma 10–15’ de movimiento", "🧩 Mantén tu racha, vas genial"];
 const WEEK_LABELS = ["D", "L", "M", "M", "J", "V", "S"]; // dom..sáb
 
 /** ----- Utilidades ----- */
 const todayKey  = () => new Date().toDateString();
-const todayIdx  = () => new Date().getDay(); // 0..6
+const todayIdx  = () => new Date().getDay();
 const hhmmToMin = (t) => { const [h,m] = t.split(":").map(Number); return h*60+m; };
 
 function getMedal(streak) {
@@ -25,6 +24,20 @@ function getMedal(streak) {
   if (streak >= 14) return { name: "Plata", emoji: "🥈", need: 14 };
   if (streak >= 7)  return { name: "Bronce",emoji: "🥉", need: 7  };
   return null;
+}
+
+/** ----- Mascota: importa imágenes ----- */
+import osito1 from "./assets/mascota/osito1.png";
+import osito2 from "./assets/mascota/osito2.png";
+import osito3 from "./assets/mascota/osito3.png";
+import osito4 from "./assets/mascota/osito4.png";
+
+/** Mapea racha → nivel 1..4 */
+function streakToLevel(streak) {
+  if (streak < 3)  return 1;   // inicio
+  if (streak < 7)  return 2;   // mejora
+  if (streak < 14) return 3;   // fuerte
+  return 4;                    // maestro
 }
 
 /** ----- Componente ----- */
@@ -36,7 +49,7 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   }, [dark]);
 
-  /** Modo Pro (config oculta por defecto). Activas con ?pro=1 o con el switch. */
+  /** Modo Pro (config oculta). Activas con ?pro=1 o con el switch */
   const [proMode, setProMode] = useState(() => {
     const url = new URL(window.location.href);
     if (url.searchParams.get("pro") === "1") { localStorage.setItem("proMode","1"); return true; }
@@ -44,16 +57,15 @@ export default function App() {
   });
   useEffect(() => { proMode ? localStorage.setItem("proMode","1") : localStorage.removeItem("proMode"); }, [proMode]);
 
-  /** Qué comidas cuentan (personalización) */
+  /** Qué comidas cuentan */
   const [enabledMeals, setEnabledMeals] = useState(() => {
     const saved = localStorage.getItem("enabledMeals");
     if (saved) return JSON.parse(saved);
-    // por defecto: todas menos colación nocturna
     return ALL_MEALS.reduce((acc, m) => ({ ...acc, [m.key]: m.key !== "colacion3" }), {});
   });
   useEffect(() => localStorage.setItem("enabledMeals", JSON.stringify(enabledMeals)), [enabledMeals]);
 
-  /** Horarios por comida (para recordatorios internos) */
+  /** Horarios (recordatorios internos) */
   const [mealTimes, setMealTimes] = useState(() => {
     const saved = localStorage.getItem("mealTimes");
     if (saved) return JSON.parse(saved);
@@ -63,7 +75,7 @@ export default function App() {
   });
   useEffect(() => localStorage.setItem("mealTimes", JSON.stringify(mealTimes)), [mealTimes]);
 
-  /** Estado de hoy: comidas hechas (se resetea cada día) */
+  /** Estado de hoy: comidas hechas */
   const [mealsDone, setMealsDone] = useState(() => {
     const savedMeals = localStorage.getItem("mealsDone");
     const savedDate  = localStorage.getItem("mealsDate");
@@ -80,7 +92,7 @@ export default function App() {
     localStorage.setItem("mealsDate", todayKey());
   }, [mealsDone]);
 
-  /** Meta y puntos/racha/semana */
+  /** Meta / racha / puntos / semanal */
   const [goal, setGoal] = useState(() => Number(localStorage.getItem("goal") || 100));
   useEffect(() => localStorage.setItem("goal", String(goal)), [goal]);
 
@@ -108,13 +120,18 @@ export default function App() {
     return "🏆 ¡Meta alcanzada hoy!";
   }, [percent, goal]);
 
+  const tip = useMemo(() => {
+    const pool = percent < 60 ? TIPS_LOW : TIPS_HIGH;
+    return pool[new Date().getDate() % pool.length];
+  }, [percent]);
+
   const medal = getMedal(streak);
   const nextMedal = streak >= 30 ? null
     : streak >= 14 ? { name: "Oro", need: 30 }
     : streak >= 7  ? { name: "Plata", need: 14 }
     : { name: "Bronce", need: 7 };
 
-  /** Guardar semanal cada vez que cambie el % del día */
+  /** Guardar semanal al cambiar % */
   useEffect(() => {
     const idx = todayIdx();
     const arr = [...weeklyData];
@@ -123,13 +140,13 @@ export default function App() {
     localStorage.setItem("weeklyData", JSON.stringify(arr));
   }, [percent]); // eslint-disable-line
 
-  /** Racha + Puntos: solo 1 vez por día cuando se alcanza la meta */
+  /** Racha + puntos (1 vez por día al alcanzar meta) */
   useEffect(() => {
     const today = todayKey();
     const lastCounted = localStorage.getItem("lastDay");
     if (percent >= goal && lastCounted !== today) {
       const newStreak = streak + 1;
-      const newPoints = points + 2; // +2 puntos por alcanzar la meta del día
+      const newPoints = points + 2;
       setStreak(newStreak);
       setPoints(newPoints);
       localStorage.setItem("streak", String(newStreak));
@@ -138,13 +155,13 @@ export default function App() {
     }
   }, [percent, goal, streak, points]);
 
-  /** Recordatorios internos: si estamos dentro de la ventana y no está marcada la comida */
+  /** Recordatorios internos (mientras app abierta) */
   const [pendingMeals, setPendingMeals] = useState([]);
   const [dismissToday, setDismissToday] = useState(() => localStorage.getItem("dismissReminders") === todayKey());
   useEffect(() => {
     if (dismissToday) return;
-    const winMin = 90; // ventana de 90 minutos
-    const id = setInterval(() => {
+    const winMin = 90;
+    const check = () => {
       const now = new Date();
       const cur = now.getHours()*60 + now.getMinutes();
       const due = ALL_MEALS
@@ -156,20 +173,9 @@ export default function App() {
         })
         .map(m => m.label);
       setPendingMeals(due);
-    }, 60 * 1000);
-    // correr una vez al entrar
-    const now = new Date();
-    const cur = now.getHours()*60 + now.getMinutes();
-    const due = ALL_MEALS
-      .filter(m => enabledMeals[m.key])
-      .filter(m => {
-        const t = mealTimes[m.key] || m.defaultTime;
-        const base = hhmmToMin(t);
-        return cur >= base && cur <= base + winMin && !mealsDone[m.key];
-      })
-      .map(m => m.label);
-    setPendingMeals(due);
-
+    };
+    check();
+    const id = setInterval(check, 60 * 1000);
     return () => clearInterval(id);
   }, [enabledMeals, mealTimes, mealsDone, dismissToday]);
 
@@ -195,11 +201,22 @@ export default function App() {
     setEnabledMeals(full);
   }
 
-  /** Tip del día (según nivel) */
-  const tip = useMemo(() => {
-    const pool = percent < 60 ? TIPS_LOW : TIPS_HIGH;
-    return pool[new Date().getDate() % pool.length];
-  }, [percent]);
+  /** ----- Mascota: nivel y animación de rebote ----- */
+  const level = useMemo(() => streakToLevel(streak), [streak]);
+  const prevLevelRef = useRef(level);
+  const [bounce, setBounce] = useState(false);
+  const mascotSrc = useMemo(() => {
+    return [osito1, osito2, osito3, osito4][level - 1];
+  }, [level]);
+
+  useEffect(() => {
+    if (prevLevelRef.current !== level) {
+      setBounce(true);
+      const t = setTimeout(() => setBounce(false), 800);
+      prevLevelRef.current = level;
+      return () => clearTimeout(t);
+    }
+  }, [level]);
 
   return (
     <div className="container">
@@ -224,7 +241,28 @@ export default function App() {
         </div>
       )}
 
-      {/* Configuración (oculta por defecto; visible en Modo Pro) */}
+      {/* MASCOTA */}
+      <div className="card mascota-card">
+        <h2>🐻 Tu Mascota</h2>
+        <div className="mascota-box">
+          <img
+            src={mascotSrc}
+            alt="Osito"
+            className={`mascota-img ${bounce ? "bounce" : ""}`}
+          />
+          <div className="mascota-info">
+            <div className="mascota-level">Nivel {level}</div>
+            <div className="mascota-note">
+              {level === 1 && "Tu osito está despertando ✨"}
+              {level === 2 && "Tu osito se ve más feliz 😃"}
+              {level === 3 && "Tu osito está fuerte 💪"}
+              {level >= 4 && "¡Osito maestro de la salud! 🏆"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Configuración (Modo Pro) */}
       {proMode && (
         <div className="card">
           <h2>⚙️ Configuración (solo profesional)</h2>
@@ -278,7 +316,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Comidas del día (solo las activas) */}
+      {/* Comidas del día */}
       <div className="card">
         <h2>🍽️ Comidas del día</h2>
         {activeKeys.length === 0 ? (
