@@ -1,74 +1,87 @@
 import { useState, useEffect } from "react";
+import "./index.css";
 
-function App() {
-  // --- PROGRESO ---
-  const [progress, setProgress] = useState(() => {
-    const saved = localStorage.getItem("progress");
-    return saved ? JSON.parse(saved) : 0;
-  });
+export default function App() {
+  const [progreso, setProgreso] = useState(
+    parseInt(localStorage.getItem("progreso")) || 0
+  );
+  const [meta, setMeta] = useState(
+    parseInt(localStorage.getItem("meta")) || 60
+  );
+  const [racha, setRacha] = useState(
+    parseInt(localStorage.getItem("racha")) || 0
+  );
+  const [mensaje, setMensaje] = useState("");
 
+  // Guardar datos en localStorage
   useEffect(() => {
-    localStorage.setItem("progress", JSON.stringify(progress));
-  }, [progress]);
+    localStorage.setItem("progreso", progreso);
+    localStorage.setItem("meta", meta);
+    localStorage.setItem("racha", racha);
+  }, [progreso, meta, racha]);
 
-  // --- META DIARIA ---
-  const [dailyGoal, setDailyGoal] = useState(60);
-
-  // --- RACHA ---
-  const [streak, setStreak] = useState(() => {
-    const saved = localStorage.getItem("streak");
-    return saved ? JSON.parse(saved) : 0;
-  });
-
+  // Mensajes motivadores según avance
   useEffect(() => {
-    const today = new Date().toDateString();
-    const lastDay = localStorage.getItem("lastDay");
+    if (progreso === 0) setMensaje("💡 ¡Vamos, da el primer paso!");
+    else if (progreso < meta / 2) setMensaje("⚡ ¡Buen inicio, sigue!");
+    else if (progreso < meta) setMensaje("🔥 Estás cerca de tu meta!");
+    else if (progreso >= meta) setMensaje("🏆 ¡Meta alcanzada!");
+  }, [progreso, meta]);
 
-    if (progress >= dailyGoal && lastDay !== today) {
-      setStreak((prev) => {
-        const newStreak = prev + 1;
-        localStorage.setItem("streak", JSON.stringify(newStreak));
-        localStorage.setItem("lastDay", today);
-        return newStreak;
-      });
+  // Actualizar racha cuando se cumple meta
+  useEffect(() => {
+    if (progreso >= meta) {
+      if (!localStorage.getItem("metaCumplidaHoy")) {
+        setRacha(racha + 1);
+        localStorage.setItem("metaCumplidaHoy", "true");
+      }
+    } else {
+      localStorage.removeItem("metaCumplidaHoy");
     }
-  }, [progress, dailyGoal]);
+  }, [progreso, meta, racha]);
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+    <div className="app">
       <h1>🌱 Progreso Nutricional</h1>
 
-      {/* Barra de progreso */}
-      <p>Progreso actual: {progress}%</p>
-      <input
-        type="range"
-        min="0"
-        max="100"
-        value={progress}
-        onChange={(e) => setProgress(Number(e.target.value))}
-      />
+      <div className="card">
+        <h2>📊 Tu progreso</h2>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={progreso}
+          onChange={(e) => setProgreso(parseInt(e.target.value))}
+        />
+        <p>{progreso}%</p>
+        <div
+          className="barra"
+          style={{
+            width: progreso + "%",
+            background: progreso >= meta ? "green" : "orange",
+          }}
+        ></div>
+        <p>{mensaje}</p>
+      </div>
 
-      {/* Meta diaria */}
-      <div style={{ marginTop: "1rem" }}>
-        <p>
-          Meta diaria: {dailyGoal}%{" "}
-          {progress >= dailyGoal ? "✅ ¡Meta cumplida!" : "❌ Aún no llegas"}
-        </p>
+      <div className="card">
+        <h2>🎯 Meta diaria</h2>
         <input
           type="number"
-          value={dailyGoal}
-          onChange={(e) => setDailyGoal(Number(e.target.value))}
-          min="10"
-          max="100"
+          value={meta}
+          onChange={(e) => setMeta(parseInt(e.target.value))}
         />
+        <p>Meta actual: {meta}%</p>
       </div>
 
-      {/* Racha */}
-      <div style={{ marginTop: "1rem" }}>
-        <p>🔥 Racha de días cumplidos: {streak}</p>
+      <div className="card">
+        <h2>🔥 Racha</h2>
+        <p>{racha} días seguidos cumpliendo la meta</p>
       </div>
+
+      {progreso >= 100 && (
+        <div className="logro">🏅 ¡Logro desbloqueado: 100% completado!</div>
+      )}
     </div>
   );
 }
-
-export default App;
