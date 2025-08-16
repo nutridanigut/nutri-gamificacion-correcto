@@ -1,163 +1,304 @@
 import { useEffect, useMemo, useState } from "react";
 
-const MEALS = [
-  { key: "desayuno", label: "Desayuno" },
-  { key: "colacion1", label: "Colación AM" },
-  { key: "almuerzo", label: "Almuerzo" },
-  { key: "colacion2", label: "Colación PM" },
-  { key: "once", label: "Once" },
-  { key: "colacion3", label: "Colación nocturna (opcional)" },
+/** ----- Datos base ----- */
+const ALL_MEALS = [
+  { key: "desayuno",  label: "Desayuno",     defaultTime: "08:00" },
+  { key: "colacion1", label: "Colación AM",  defaultTime: "11:00" },
+  { key: "almuerzo",  label: "Almuerzo",     defaultTime: "13:00" },
+  { key: "colacion2", label: "Colación PM",  defaultTime: "17:00" },
+  { key: "once",      label: "Once",         defaultTime: "20:00" },
+  { key: "colacion3", label: "Colación nocturna", defaultTime: "22:00" },
 ];
 
-const TIPS = [
-  "💧 Toma agua a lo largo del día.",
-  "🌈 Suma frutas/verduras de colores.",
-  "🚶‍♀️ Muévete 10–15 minutos.",
-  "💪 La constancia vale más que la perfección.",
-  "🧠 Si un día fallas, retoma al siguiente.",
-];
+const TIPS_LOW  = ["🌱 Pequeños pasos → grandes cambios", "💧 Hidrátate durante el día", "🧠 Si fallas hoy, retoma mañana", "🍎 Suma 1 fruta hoy"];
+const TIPS_HIGH = ["💪 ¡Excelente constancia!", "🥗 Prueba variar colores/vegetales", "🚶‍♀️ Suma 10–15’ de movimiento", "🧩 Mantén tu racha, vas genial"];
 
 const WEEK_LABELS = ["D", "L", "M", "M", "J", "V", "S"]; // dom..sáb
 
-function todayKey() {
-  return new Date().toDateString(); // p.ej. "Mon Aug 12 2025"
-}
-
-function todayIndex() {
-  return new Date().getDay(); // 0=Dom .. 6=Sab
-}
+/** ----- Utilidades ----- */
+const todayKey  = () => new Date().toDateString();
+const todayIdx  = () => new Date().getDay(); // 0..6
+const hhmmToMin = (t) => { const [h,m] = t.split(":").map(Number); return h*60+m; };
 
 function getMedal(streak) {
-  if (streak >= 30) return { name: "Oro", emoji: "🥇", need: 30 };
+  if (streak >= 30) return { name: "Oro",   emoji: "🥇", need: 30 };
   if (streak >= 14) return { name: "Plata", emoji: "🥈", need: 14 };
-  if (streak >= 7) return { name: "Bronce", emoji: "🥉", need: 7 };
+  if (streak >= 7)  return { name: "Bronce",emoji: "🥉", need: 7  };
   return null;
 }
 
+/** ----- Componente ----- */
 export default function App() {
-  // -------- Persistencia básica --------
-  const [meals, setMeals] = useState(() => {
-    const savedMeals = localStorage.getItem("meals");
-    const savedDate = localStorage.getItem("mealsDate");
-    // reset automático si es nuevo día
+  /** Tema (claro/oscuro) */
+  const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+  useEffect(() => {
+    localStorage.setItem("theme", dark ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  }, [dark]);
+
+  /** Modo Pro (config oculta por defecto). Activas con ?pro=1 o con el switch. */
+  const [proMode, setProMode] = useState(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("pro") === "1") { localStorage.setItem("proMode","1"); return true; }
+    return localStorage.getItem("proMode") === "1";
+  });
+  useEffect(() => { proMode ? localStorage.setItem("proMode","1") : localStorage.removeItem("proMode"); }, [proMode]);
+
+  /** Qué comidas cuentan (personalización) */
+  const [enabledMeals, setEnabledMeals] = useState(() => {
+    const saved = localStorage.getItem("enabledMeals");
+    if (saved) return JSON.parse(saved);
+    // por defecto: todas menos colación nocturna
+    return ALL_MEALS.reduce((acc, m) => ({ ...acc, [m.key]: m.key !== "colacion3" }), {});
+  });
+  useEffect(() => localStorage.setItem("enabledMeals", JSON.stringify(enabledMeals)), [enabledMeals]);
+
+  /** Horarios por comida (para recordatorios internos) */
+  const [mealTimes, setMealTimes] = useState(() => {
+    const saved = localStorage.getItem("mealTimes");
+    if (saved) return JSON.parse(saved);
+    const base = ALL_MEALS.reduce((acc, m) => ({ ...acc, [m.key]: m.defaultTime }), {});
+    localStorage.setItem("mealTimes", JSON.stringify(base));
+    return base;
+  });
+  useEffect(() => localStorage.setItem("mealTimes", JSON.stringify(mealTimes)), [mealTimes]);
+
+  /** Estado de hoy: comidas hechas (se resetea cada día) */
+  const [mealsDone, setMealsDone] = useState(() => {
+    const savedMeals = localStorage.getItem("mealsDone");
+    const savedDate  = localStorage.getItem("mealsDate");
     if (!savedMeals || savedDate !== todayKey()) {
-      const empty = MEALS.reduce((acc, m) => ({ ...acc, [m.key]: false }), {});
-      localStorage.setItem("meals", JSON.stringify(empty));
+      const empty = ALL_MEALS.reduce((acc, m) => ({ ...acc, [m.key]: false }), {});
+      localStorage.setItem("mealsDone", JSON.stringify(empty));
       localStorage.setItem("mealsDate", todayKey());
       return empty;
     }
     return JSON.parse(savedMeals);
   });
+  useEffect(() => {
+    localStorage.setItem("mealsDone", JSON.stringify(mealsDone));
+    localStorage.setItem("mealsDate", todayKey());
+  }, [mealsDone]);
 
-  const [goal, setGoal] = useState(() => {
-    const saved = localStorage.getItem("goal");
-    return saved ? Number(saved) : 100; // meta = completar todas las comidas
-  });
+  /** Meta y puntos/racha/semana */
+  const [goal, setGoal] = useState(() => Number(localStorage.getItem("goal") || 100));
+  useEffect(() => localStorage.setItem("goal", String(goal)), [goal]);
 
-  const [streak, setStreak] = useState(() => {
-    const saved = localStorage.getItem("streak");
-    return saved ? Number(saved) : 0;
-  });
-
+  const [streak, setStreak] = useState(() => Number(localStorage.getItem("streak") || 0));
+  const [points, setPoints] = useState(() => Number(localStorage.getItem("points") || 0));
   const [weeklyData, setWeeklyData] = useState(() => {
-    const saved = localStorage.getItem("weeklyData");
-    if (saved) {
-      try {
-        const arr = JSON.parse(saved);
-        return Array.isArray(arr) && arr.length === 7 ? arr : [0, 0, 0, 0, 0, 0, 0];
-      } catch {
-        return [0, 0, 0, 0, 0, 0, 0];
-      }
-    }
-    return [0, 0, 0, 0, 0, 0, 0];
+    try {
+      const arr = JSON.parse(localStorage.getItem("weeklyData") || "[]");
+      return Array.isArray(arr) && arr.length === 7 ? arr : [0,0,0,0,0,0,0];
+    } catch { return [0,0,0,0,0,0,0]; }
   });
 
-  // -------- Derivados --------
+  /** Derivados */
+  const activeKeys = useMemo(() => ALL_MEALS.filter(m => enabledMeals[m.key]).map(m => m.key), [enabledMeals]);
   const percent = useMemo(() => {
-    const total = MEALS.length;
-    const checked = Object.values(meals).filter(Boolean).length;
+    const total = activeKeys.length || 1;
+    const checked = activeKeys.filter(k => mealsDone[k]).length;
     return Math.round((checked / total) * 100);
-  }, [meals]);
+  }, [activeKeys, mealsDone]);
 
   const message = useMemo(() => {
-    if (percent === 0) return "💡 ¡Vamos, da el primer paso!";
-    if (percent < 50) return "⚡ Buen inicio, sigue marcando.";
-    if (percent < goal) return "🔥 ¡Estás cerca de tu meta!";
+    if (percent === 0)      return "💡 ¡Vamos, da el primer paso!";
+    if (percent < 50)       return "⚡ Buen inicio, sigue marcando.";
+    if (percent < goal)     return "🔥 ¡Estás cerca de tu meta!";
     return "🏆 ¡Meta alcanzada hoy!";
   }, [percent, goal]);
 
-  const tip = useMemo(() => {
-    const idx = new Date().getDate() % TIPS.length;
-    return TIPS[idx];
-  }, []);
-
   const medal = getMedal(streak);
-  const nextMedal =
-    streak >= 30 ? null : streak >= 14 ? { name: "Oro", need: 30 } : streak >= 7 ? { name: "Plata", need: 14 } : { name: "Bronce", need: 7 };
+  const nextMedal = streak >= 30 ? null
+    : streak >= 14 ? { name: "Oro", need: 30 }
+    : streak >= 7  ? { name: "Plata", need: 14 }
+    : { name: "Bronce", need: 7 };
 
-  // -------- Efectos de guardado --------
+  /** Guardar semanal cada vez que cambie el % del día */
   useEffect(() => {
-    localStorage.setItem("meals", JSON.stringify(meals));
-    localStorage.setItem("mealsDate", todayKey());
-  }, [meals]);
-
-  useEffect(() => {
-    localStorage.setItem("goal", String(goal));
-  }, [goal]);
-
-  // Actualizar weeklyData cuando cambia el % del día
-  useEffect(() => {
-    const idx = todayIndex();
-    const newArr = [...weeklyData];
-    newArr[idx] = percent;
-    setWeeklyData(newArr);
-    localStorage.setItem("weeklyData", JSON.stringify(newArr));
+    const idx = todayIdx();
+    const arr = [...weeklyData];
+    arr[idx] = percent;
+    setWeeklyData(arr);
+    localStorage.setItem("weeklyData", JSON.stringify(arr));
   }, [percent]); // eslint-disable-line
 
-  // Racha: contar un día solo la primera vez que alcanza la meta
+  /** Racha + Puntos: solo 1 vez por día cuando se alcanza la meta */
   useEffect(() => {
     const today = todayKey();
     const lastCounted = localStorage.getItem("lastDay");
-
     if (percent >= goal && lastCounted !== today) {
       const newStreak = streak + 1;
+      const newPoints = points + 2; // +2 puntos por alcanzar la meta del día
       setStreak(newStreak);
+      setPoints(newPoints);
       localStorage.setItem("streak", String(newStreak));
+      localStorage.setItem("points", String(newPoints));
       localStorage.setItem("lastDay", today);
     }
-  }, [percent, goal, streak]);
+  }, [percent, goal, streak, points]);
 
-  // -------- Handlers --------
-  function toggleMeal(key) {
-    setMeals((m) => ({ ...m, [key]: !m[key] }));
+  /** Recordatorios internos: si estamos dentro de la ventana y no está marcada la comida */
+  const [pendingMeals, setPendingMeals] = useState([]);
+  const [dismissToday, setDismissToday] = useState(() => localStorage.getItem("dismissReminders") === todayKey());
+  useEffect(() => {
+    if (dismissToday) return;
+    const winMin = 90; // ventana de 90 minutos
+    const id = setInterval(() => {
+      const now = new Date();
+      const cur = now.getHours()*60 + now.getMinutes();
+      const due = ALL_MEALS
+        .filter(m => enabledMeals[m.key])
+        .filter(m => {
+          const t = mealTimes[m.key] || m.defaultTime;
+          const base = hhmmToMin(t);
+          return cur >= base && cur <= base + winMin && !mealsDone[m.key];
+        })
+        .map(m => m.label);
+      setPendingMeals(due);
+    }, 60 * 1000);
+    // correr una vez al entrar
+    const now = new Date();
+    const cur = now.getHours()*60 + now.getMinutes();
+    const due = ALL_MEALS
+      .filter(m => enabledMeals[m.key])
+      .filter(m => {
+        const t = mealTimes[m.key] || m.defaultTime;
+        const base = hhmmToMin(t);
+        return cur >= base && cur <= base + winMin && !mealsDone[m.key];
+      })
+      .map(m => m.label);
+    setPendingMeals(due);
+
+    return () => clearInterval(id);
+  }, [enabledMeals, mealTimes, mealsDone, dismissToday]);
+
+  function dismissRemindersForToday() {
+    setDismissToday(true);
+    localStorage.setItem("dismissReminders", todayKey());
   }
 
+  /** Handlers */
+  function toggleEnabled(key) { setEnabledMeals(e => ({ ...e, [key]: !e[key] })); }
+  function toggleDone(key)    { setMealsDone(d => ({ ...d, [key]: !d[key] })); }
   function resetToday() {
-    const empty = MEALS.reduce((acc, x) => ({ ...acc, [x.key]: false }), {});
-    setMeals(empty);
+    const empty = ALL_MEALS.reduce((acc, x) => ({ ...acc, [x.key]: false }), {});
+    setMealsDone(empty);
   }
+  function applyPreset(n) {
+    let preset = {};
+    if (n === 3) preset = { desayuno: true, almuerzo: true, once: true };
+    if (n === 4) preset = { desayuno: true, almuerzo: true, colacion2: true, once: true };
+    if (n === 5) preset = { desayuno: true, colacion1: true, almuerzo: true, colacion2: true, once: true };
+    if (n === 6) preset = { desayuno: true, colacion1: true, almuerzo: true, colacion2: true, once: true, colacion3: true };
+    const full = ALL_MEALS.reduce((acc, m) => ({ ...acc, [m.key]: !!preset[m.key] }), {});
+    setEnabledMeals(full);
+  }
+
+  /** Tip del día (según nivel) */
+  const tip = useMemo(() => {
+    const pool = percent < 60 ? TIPS_LOW : TIPS_HIGH;
+    return pool[new Date().getDate() % pool.length];
+  }, [percent]);
 
   return (
     <div className="container">
-      <h1>🌱 Progreso Nutricional</h1>
+      {/* Header */}
+      <header className="header">
+        <h1>🌱 Progreso Nutricional</h1>
+        <div className="header-actions">
+          <button className="ghost" onClick={() => setDark(d => !d)}>
+            {dark ? "☀️ Claro" : "🌙 Oscuro"}
+          </button>
+          <button className="ghost" onClick={() => setProMode(v => !v)}>
+            {proMode ? "🔓 Modo Pro" : "🔒 Modo Pro"}
+          </button>
+        </div>
+      </header>
 
-      {/* Comidas */}
+      {/* Banner de recordatorios */}
+      {!dismissToday && pendingMeals.length > 0 && (
+        <div className="banner">
+          ⏰ ¡Hora de {pendingMeals.join(", ")}! — marca cuando la realices.
+          <button className="link" onClick={dismissRemindersForToday}>ocultar por hoy</button>
+        </div>
+      )}
+
+      {/* Configuración (oculta por defecto; visible en Modo Pro) */}
+      {proMode && (
+        <div className="card">
+          <h2>⚙️ Configuración (solo profesional)</h2>
+
+          <div className="chips">
+            <button className="chip" onClick={() => applyPreset(3)}>Preset 3 (D+Alm+Once)</button>
+            <button className="chip" onClick={() => applyPreset(4)}>Preset 4</button>
+            <button className="chip" onClick={() => applyPreset(5)}>Preset 5</button>
+            <button className="chip" onClick={() => applyPreset(6)}>Preset 6</button>
+          </div>
+
+          <div className="row two-cols">
+            <div>
+              <h3>¿Qué comidas cuentan?</h3>
+              <ul className="list">
+                {ALL_MEALS.map(m => (
+                  <li key={m.key}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={!!enabledMeals[m.key]}
+                        onChange={() => toggleEnabled(m.key)}
+                      />
+                      {m.label}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <p className="muted">El % del día se calcula sobre las comidas activas.</p>
+            </div>
+
+            <div>
+              <h3>Horarios (recordatorios internos)</h3>
+              <ul className="list">
+                {ALL_MEALS.map(m => (
+                  <li key={m.key}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ minWidth: 160 }}>{m.label}</span>
+                      <input
+                        type="time"
+                        value={mealTimes[m.key] || m.defaultTime}
+                        onChange={(e) => setMealTimes(t => ({ ...t, [m.key]: e.target.value }))}
+                      />
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <p className="muted">Mostrará un aviso durante ~90 min desde la hora señalada.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comidas del día (solo las activas) */}
       <div className="card">
         <h2>🍽️ Comidas del día</h2>
-        <ul className="list">
-          {MEALS.map((m) => (
-            <li key={m.key}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={!!meals[m.key]}
-                  onChange={() => toggleMeal(m.key)}
-                />
-                {m.label}
-              </label>
-            </li>
-          ))}
-        </ul>
+        {activeKeys.length === 0 ? (
+          <p className="muted">Activa al menos una comida en Configuración.</p>
+        ) : (
+          <ul className="list">
+            {ALL_MEALS.filter(m => enabledMeals[m.key]).map(m => (
+              <li key={m.key}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={!!mealsDone[m.key]}
+                    onChange={() => toggleDone(m.key)}
+                  />
+                  {m.label}
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
         <button className="btn" onClick={resetToday}>Reiniciar día</button>
       </div>
 
@@ -167,19 +308,16 @@ export default function App() {
         <div className="progress-bar">
           <div
             className="progress"
-            style={{
-              width: `${percent}%`,
-              background: percent >= goal ? "#16a34a" : "#f59e0b",
-            }}
+            style={{ width: `${percent}%`, background: percent >= goal ? "#16a34a" : "#f59e0b" }}
           />
         </div>
         <p className="strong">{percent}% completado</p>
         <p>{message}</p>
       </div>
 
-      {/* Meta + Racha + Medalla */}
+      {/* Meta / Racha / Puntos / Medallas */}
       <div className="card">
-        <h2>🎯 Meta & 🔥 Racha</h2>
+        <h2>🎯 Meta, 🔥 Racha, ⭐ Puntos</h2>
         <div className="row">
           <label>
             Meta (%):
@@ -192,6 +330,7 @@ export default function App() {
             />
           </label>
           <div className="streak">🔥 {streak} días seguidos</div>
+          <div className="points">⭐ {points} pts</div>
         </div>
 
         <div className="medals">
@@ -200,8 +339,7 @@ export default function App() {
           </div>
           {nextMedal && (
             <div className="next">
-              Próxima: {nextMedal.name} a {nextMedal.need} días. Te faltan{" "}
-              <b>{nextMedal.need - streak}</b>.
+              Próxima: {nextMedal.name} a {nextMedal.need} días. Te faltan <b>{nextMedal.need - streak}</b>.
             </div>
           )}
         </div>
@@ -216,10 +354,7 @@ export default function App() {
               <div className="bar-wrap">
                 <div
                   className="bar"
-                  style={{
-                    height: `${val}%`,
-                    background: val >= 60 ? "#16a34a" : "#f59e0b",
-                  }}
+                  style={{ height: `${val}%`, background: val >= 60 ? "#16a34a" : "#f59e0b" }}
                 />
               </div>
               <div className="week-label">{WEEK_LABELS[i]}</div>
