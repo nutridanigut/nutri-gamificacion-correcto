@@ -134,3 +134,29 @@ input[type="number"], input[type="time"] {
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
 .dot-green { background: var(--ok); }
 .dot-amber { background: var(--warn); }
+
+/* ---------- Mascota ---------- */
+.mascota-card { overflow: hidden; }
+.mascota-box {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.mascota-img {
+  width: 200px; height: 200px; object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15));
+}
+.mascota-info { display: flex; flex-direction: column; gap: 6px; }
+.mascota-level {
+  font-weight: 700; font-size: 1.1rem;
+}
+.mascota-note { color: var(--muted); }
+
+/* Animación de rebote cuando sube de nivel */
+@keyframes bounceIn {
+  0%   { transform: scale(0.9); opacity: 0.75; }
+  40%  { transform: scale(1.08); opacity: 1; }
+  70%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+.bounce {
+  animation: bounceIn 0.8s ease;
+}
