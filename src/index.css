@@ -1,43 +1,64 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f9;
-  margin: 0;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progreso Nutricional</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>🌱 Progreso Nutricional</h1>
 
-.app {
-  max-width: 400px;
-  width: 100%;
-}
+  <!-- Comidas del día -->
+  <div class="card">
+    <h2>🍽️ Comidas del día</h2>
+    <label><input type="checkbox" class="meal" value="Desayuno"> Desayuno</label><br>
+    <label><input type="checkbox" class="meal" value="Colación AM"> Colación AM</label><br>
+    <label><input type="checkbox" class="meal" value="Almuerzo"> Almuerzo</label><br>
+    <label><input type="checkbox" class="meal" value="Colación PM"> Colación PM</label><br>
+    <label><input type="checkbox" class="meal" value="Once"> Once</label><br>
+    <label><input type="checkbox" class="meal" value="Colación Nocturna"> Colación nocturna (opcional)</label>
+  </div>
 
-h1 {
-  text-align: center;
-  color: #2c3e50;
-}
+  <!-- Progreso -->
+  <div class="card">
+    <h2>📊 Progreso diario</h2>
+    <progress id="progressBar" max="100" value="0"></progress>
+    <p id="progressText">0% completado</p>
+    <p id="reinforcement">👉 Marca tus comidas para avanzar</p>
+  </div>
 
-.card {
-  background: white;
-  padding: 20px;
-  margin: 15px 0;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
+  <!-- Racha -->
+  <div class="card">
+    <h2>🔥 Racha</h2>
+    <p id="streak">0 días seguidos cumpliendo la meta</p>
+  </div>
 
-.barra {
-  height: 10px;
-  margin-top: 10px;
-  border-radius: 5px;
-  transition: width 0.3s ease-in-out;
-}
+  <!-- Notas -->
+  <div class="card">
+    <h2>📝 Reflexión del día</h2>
+    <textarea id="notes" placeholder="Escribe cómo te sentiste hoy..."></textarea>
+  </div>
 
-.logro {
-  background: gold;
-  color: black;
-  padding: 10px;
-  border-radius: 10px;
-  text-align: center;
-  font-weight: bold;
-  margin-top: 15px;
-}
+  <!-- Progreso semanal -->
+  <div class="card">
+    <h2>📅 Progreso semanal</h2>
+    <canvas id="weeklyChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Tip motivacional -->
+  <div class="card">
+    <h2>💡 Tip del día</h2>
+    <p id="dailyTip"></p>
+  </div>
+
+  <!-- Recompensa -->
+  <div class="card" id="reward" style="display:none;">
+    <h2>🏆 ¡Premio desbloqueado!</h2>
+    <p>Felicitaciones, llevas 5 días seguidos cumpliendo tu meta 🎉</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
