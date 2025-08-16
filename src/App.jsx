@@ -17,44 +17,68 @@ const TIPS = [
   "🧠 Si un día fallas, retoma al siguiente.",
 ];
 
+const WEEK_LABELS = ["D", "L", "M", "M", "J", "V", "S"]; // dom..sáb
+
+function todayKey() {
+  return new Date().toDateString(); // p.ej. "Mon Aug 12 2025"
+}
+
+function todayIndex() {
+  return new Date().getDay(); // 0=Dom .. 6=Sab
+}
+
+function getMedal(streak) {
+  if (streak >= 30) return { name: "Oro", emoji: "🥇", need: 30 };
+  if (streak >= 14) return { name: "Plata", emoji: "🥈", need: 14 };
+  if (streak >= 7) return { name: "Bronce", emoji: "🥉", need: 7 };
+  return null;
+}
+
 export default function App() {
-  // Estado de comidas (se inicializa desde localStorage)
+  // -------- Persistencia básica --------
   const [meals, setMeals] = useState(() => {
-    const saved = localStorage.getItem("meals");
-    if (saved) return JSON.parse(saved);
-    // por defecto: todas desmarcadas
-    return MEALS.reduce((acc, m) => ({ ...acc, [m.key]: false }), {});
+    const savedMeals = localStorage.getItem("meals");
+    const savedDate = localStorage.getItem("mealsDate");
+    // reset automático si es nuevo día
+    if (!savedMeals || savedDate !== todayKey()) {
+      const empty = MEALS.reduce((acc, m) => ({ ...acc, [m.key]: false }), {});
+      localStorage.setItem("meals", JSON.stringify(empty));
+      localStorage.setItem("mealsDate", todayKey());
+      return empty;
+    }
+    return JSON.parse(savedMeals);
   });
 
-  // Meta diaria (por si luego quieres cambiarla)
   const [goal, setGoal] = useState(() => {
     const saved = localStorage.getItem("goal");
     return saved ? Number(saved) : 100; // meta = completar todas las comidas
   });
 
-  // Racha (días seguidos cumpliendo meta)
   const [streak, setStreak] = useState(() => {
     const saved = localStorage.getItem("streak");
     return saved ? Number(saved) : 0;
   });
 
-  // Guardar al cambiar
-  useEffect(() => {
-    localStorage.setItem("meals", JSON.stringify(meals));
-  }, [meals]);
+  const [weeklyData, setWeeklyData] = useState(() => {
+    const saved = localStorage.getItem("weeklyData");
+    if (saved) {
+      try {
+        const arr = JSON.parse(saved);
+        return Array.isArray(arr) && arr.length === 7 ? arr : [0, 0, 0, 0, 0, 0, 0];
+      } catch {
+        return [0, 0, 0, 0, 0, 0, 0];
+      }
+    }
+    return [0, 0, 0, 0, 0, 0, 0];
+  });
 
-  useEffect(() => {
-    localStorage.setItem("goal", String(goal));
-  }, [goal]);
-
-  // % completado
+  // -------- Derivados --------
   const percent = useMemo(() => {
     const total = MEALS.length;
     const checked = Object.values(meals).filter(Boolean).length;
     return Math.round((checked / total) * 100);
   }, [meals]);
 
-  // Mensaje motivador
   const message = useMemo(() => {
     if (percent === 0) return "💡 ¡Vamos, da el primer paso!";
     if (percent < 50) return "⚡ Buen inicio, sigue marcando.";
@@ -62,64 +86,79 @@ export default function App() {
     return "🏆 ¡Meta alcanzada hoy!";
   }, [percent, goal]);
 
-  // Actualiza racha cuando se alcanza la meta por primera vez en el día
-  useEffect(() => {
-    const today = new Date().toDateString();
-    const lastDay = localStorage.getItem("lastDay");
+  const tip = useMemo(() => {
+    const idx = new Date().getDate() % TIPS.length;
+    return TIPS[idx];
+  }, []);
 
-    if (percent >= goal) {
-      if (lastDay !== today) {
-        const newStreak = streak + 1;
-        setStreak(newStreak);
-        localStorage.setItem("streak", String(newStreak));
-        localStorage.setItem("lastDay", today);
-      }
-    } else {
-      // si baja de la meta, no rompemos la racha del día ya contado
-      // solo mostramos el valor actual guardado
+  const medal = getMedal(streak);
+  const nextMedal =
+    streak >= 30 ? null : streak >= 14 ? { name: "Oro", need: 30 } : streak >= 7 ? { name: "Plata", need: 14 } : { name: "Bronce", need: 7 };
+
+  // -------- Efectos de guardado --------
+  useEffect(() => {
+    localStorage.setItem("meals", JSON.stringify(meals));
+    localStorage.setItem("mealsDate", todayKey());
+  }, [meals]);
+
+  useEffect(() => {
+    localStorage.setItem("goal", String(goal));
+  }, [goal]);
+
+  // Actualizar weeklyData cuando cambia el % del día
+  useEffect(() => {
+    const idx = todayIndex();
+    const newArr = [...weeklyData];
+    newArr[idx] = percent;
+    setWeeklyData(newArr);
+    localStorage.setItem("weeklyData", JSON.stringify(newArr));
+  }, [percent]); // eslint-disable-line
+
+  // Racha: contar un día solo la primera vez que alcanza la meta
+  useEffect(() => {
+    const today = todayKey();
+    const lastCounted = localStorage.getItem("lastDay");
+
+    if (percent >= goal && lastCounted !== today) {
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      localStorage.setItem("streak", String(newStreak));
+      localStorage.setItem("lastDay", today);
     }
   }, [percent, goal, streak]);
 
-  // Tip del día (se fija por fecha)
-  const tip = useMemo(() => {
-    const dayIndex = new Date().getDate() % TIPS.length;
-    return TIPS[dayIndex];
-  }, []);
-
+  // -------- Handlers --------
   function toggleMeal(key) {
     setMeals((m) => ({ ...m, [key]: !m[key] }));
   }
 
   function resetToday() {
-    const reset = MEALS.reduce((acc, x) => ({ ...acc, [x.key]: false }), {});
-    setMeals(reset);
+    const empty = MEALS.reduce((acc, x) => ({ ...acc, [x.key]: false }), {});
+    setMeals(empty);
   }
 
   return (
     <div className="container">
       <h1>🌱 Progreso Nutricional</h1>
 
-      {/* Comidas del día */}
+      {/* Comidas */}
       <div className="card">
         <h2>🍽️ Comidas del día</h2>
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+        <ul className="list">
           {MEALS.map((m) => (
-            <li key={m.key} style={{ marginBottom: 8 }}>
+            <li key={m.key}>
               <label>
                 <input
                   type="checkbox"
                   checked={!!meals[m.key]}
                   onChange={() => toggleMeal(m.key)}
-                  style={{ marginRight: 8 }}
                 />
                 {m.label}
               </label>
             </li>
           ))}
         </ul>
-        <button onClick={resetToday} style={{ marginTop: 10 }}>
-          Reiniciar día
-        </button>
+        <button className="btn" onClick={resetToday}>Reiniciar día</button>
       </div>
 
       {/* Progreso */}
@@ -134,14 +173,14 @@ export default function App() {
             }}
           />
         </div>
-        <p style={{ fontWeight: "bold" }}>{percent}% completado</p>
+        <p className="strong">{percent}% completado</p>
         <p>{message}</p>
       </div>
 
-      {/* Meta y racha */}
+      {/* Meta + Racha + Medalla */}
       <div className="card">
         <h2>🎯 Meta & 🔥 Racha</h2>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="row">
           <label>
             Meta (%):
             <input
@@ -150,12 +189,46 @@ export default function App() {
               max={100}
               value={goal}
               onChange={(e) => setGoal(Number(e.target.value || 0))}
-              style={{ marginLeft: 8, width: 80 }}
             />
           </label>
-          <span style={{ marginLeft: "auto", fontWeight: 600 }}>
-            🔥 {streak} días seguidos
-          </span>
+          <div className="streak">🔥 {streak} días seguidos</div>
+        </div>
+
+        <div className="medals">
+          <div className="medal">
+            {medal ? `${medal.emoji} Medalla ${medal.name}` : "— Sin medalla aún —"}
+          </div>
+          {nextMedal && (
+            <div className="next">
+              Próxima: {nextMedal.name} a {nextMedal.need} días. Te faltan{" "}
+              <b>{nextMedal.need - streak}</b>.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Historial semanal */}
+      <div className="card">
+        <h2>📅 Historial semanal</h2>
+        <div className="week-grid">
+          {weeklyData.map((val, i) => (
+            <div className="week-col" key={i} title={`${WEEK_LABELS[i]}: ${val}%`}>
+              <div className="bar-wrap">
+                <div
+                  className="bar"
+                  style={{
+                    height: `${val}%`,
+                    background: val >= 60 ? "#16a34a" : "#f59e0b",
+                  }}
+                />
+              </div>
+              <div className="week-label">{WEEK_LABELS[i]}</div>
+            </div>
+          ))}
+        </div>
+        <div className="legend">
+          <span className="dot dot-green"></span> ≥60% &nbsp;&nbsp;
+          <span className="dot dot-amber"></span> &lt;60%
         </div>
       </div>
 
