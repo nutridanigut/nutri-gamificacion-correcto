@@ -1,98 +1,73 @@
-:root {
-  --bg: #f5f7fb;
-  --fg: #111827;
-  --muted: #6b7280;
-  --card: #ffffff;
-  --shadow: rgba(0,0,0,0.08);
-  --bar-bg: #e5e7eb;
-  --accent: #111827;
-  --ok: #16a34a;
-  --warn: #f59e0b;
+:root{
+  --bg:#f5f7fb; --fg:#111827; --muted:#6b7280; --card:#fff; --shadow:rgba(0,0,0,.08);
+  --bar-bg:#e5e7eb; --accent:#111827; --ok:#16a34a; --warn:#f59e0b; --brand:#2563eb;
+}
+[data-theme="dark"]{
+  --bg:#0b1220; --fg:#e5e7eb; --muted:#9ca3af; --card:#111827; --shadow:rgba(0,0,0,.35);
+  --bar-bg:#1f2937; --accent:#e5e7eb; --ok:#22c55e; --warn:#f59e0b; --brand:#60a5fa;
 }
 
-[data-theme="dark"] {
-  --bg: #0b1220;
-  --fg: #e5e7eb;
-  --muted: #9ca3af;
-  --card: #111827;
-  --shadow: rgba(0,0,0,0.35);
-  --bar-bg: #1f2937;
-  --accent: #e5e7eb;
-  --ok: #22c55e;
-  --warn: #f59e0b;
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--fg)}
+.container{max-width:920px;margin:0 auto;padding:22px}
+h1{margin:0 0 6px}
+h2{margin:0 0 12px;font-size:1.1rem}
+h3{margin:10px 0}
+.muted{color:var(--muted)}
+
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.header-actions{display:flex;gap:8px}
+.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:9999px;padding:6px 10px;cursor:pointer}
+.ghost:hover{opacity:.85}
+
+.card{background:var(--card);padding:18px;margin:16px 0;border-radius:12px;box-shadow:0 2px 10px var(--shadow)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.two-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+
+input[type="number"],input[type="time"],input[type="text"]{
+  padding:6px;border:1px solid #d1d5db;border-radius:8px;background:transparent;color:var(--fg)
 }
+.btn{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:8px 12px;cursor:pointer}
+.btn:hover{opacity:.92}
+.link{background:transparent;border:none;color:#2563eb;text-decoration:underline;cursor:pointer}
 
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body { font-family: Arial, sans-serif; background-color: var(--bg); color: var(--fg); }
-.container { max-width: 820px; margin: 0 auto; padding: 22px; }
+.list{list-style:none;margin:0;padding:0}
+.list li{margin:8px 0}
 
-.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.header-actions { display: flex; gap: 8px; }
-.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 9999px; padding: 6px 10px; cursor: pointer; }
-.ghost:hover { opacity: .85; }
+/* Progress bar general */
+.progress-bar{width:100%;height:16px;background:var(--bar-bg);border-radius:9999px;overflow:hidden;margin:8px 0}
+.progress{height:100%;width:0;background:var(--ok);transition:width .25s}
 
-.banner { background: #fff3cd; color: #6b4e00; border: 1px solid #ffe69c; padding: 10px 12px; border-radius: 10px; box-shadow: 0 2px 10px var(--shadow); display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 12px 0; }
-.banner .link { background: transparent; border: none; color: #7c5e00; text-decoration: underline; cursor: pointer; }
+/* Mascota y pista */
+.sprite{image-rendering:pixelated}
+.track{position:relative;width:100%;height:72px;background:#eef2f7;border-radius:9999px;overflow:hidden;display:flex;align-items:center}
+[data-theme="dark"] .track{background:#192233}
+.track-fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--ok),#5ad08b);width:0%;transition:width .25s;opacity:.25}
+.walker{--p:0;position:absolute;left:calc(var(--p)*1% - 32px);top:50%;transform:translateY(-50%);transition:left .25s}
 
-.card { background: var(--card); padding: 18px; margin: 16px 0; border-radius: 12px; box-shadow: 0 2px 10px var(--shadow); }
+/* Banner recordatorio */
+.banner{background:#fff3cd;color:#6b4e00;border:1px solid #ffe69c;padding:10px 12px;border-radius:10px;box-shadow:0 2px 10px var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0}
 
-h1 { margin: 0; }
-h2 { margin: 0 0 12px 0; font-size: 1.1rem; }
-h3 { margin: 10px 0; font-size: 1rem; }
-.muted { color: var(--muted); font-size: .95rem; }
+/* Level map */
+.levelmap{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.lm-cell{position:relative;background:#eef2f7;border-radius:12px;height:54px;display:grid;place-items:center;color:#64748b}
+[data-theme="dark"] .lm-cell{background:#192233}
+.lm-cell.done{background:#dcfce7;color:#065f46}
+.lm-cell.mile{outline:2px dashed #94a3b8}
+.lm-dot{position:absolute;top:8px;left:8px;width:10px;height:10px;border-radius:50%;background:#94a3b8}
+.lm-cell.done .lm-dot{background:#16a34a}
+.lm-num{font-weight:700}
 
-.list { list-style: none; padding: 0; margin: 0; }
-.list li { margin: 8px 0; }
+/* Rewards */
+.reward{border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.reward.claimed{opacity:.7}
+.reward-title{font-weight:700}
 
-.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.two-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+/* Inventory chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:6px 10px;border-radius:9999px;background:#eef2ff;color:#3730a3}
+[data-theme="dark"] .chip{background:#1f2650;color:#c7d2fe}
 
-input[type="number"], input[type="time"] { padding: 6px; border: 1px solid #d1d5db; border-radius: 8px; background: transparent; color: var(--fg); }
-
-.btn { background: var(--accent); color: var(--bg); border: none; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
-.btn:hover { opacity: .9; }
-
-.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.chip { background: #eef2ff; color: #3730a3; border: none; padding: 6px 10px; border-radius: 9999px; cursor: pointer; }
-[data-theme="dark"] .chip { background: #1f2650; color: #c7d2fe; }
-.chip:hover { opacity: .9; }
-
-/* Progreso tradicional */
-.progress-bar { width: 100%; height: 16px; background: var(--bar-bg); border-radius: 9999px; overflow: hidden; margin: 8px 0 6px 0; }
-.progress { height: 100%; width: 0%; background: var(--ok); transition: width .25s ease-in-out; }
-.strong { font-weight: 700; }
-.streak { margin-left: auto; font-weight: 600; }
-.points { font-weight: 600; }
-
-/* Medallas */
-.medals { margin-top: 10px; }
-.medal { font-weight: 700; margin-bottom: 4px; }
-.next  { color: var(--muted); font-size: .95rem; }
-
-/* Gráfico semanal */
-.week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; margin-top: 8px; }
-.week-col { display: flex; flex-direction: column; align-items: center; }
-.bar-wrap { height: 120px; width: 20px; background: #f3f4f6; border-radius: 8px; overflow: hidden; display: flex; align-items: end; }
-[data-theme="dark"] .bar-wrap { background: #161b28; }
-.bar { width: 100%; height: 0%; background: var(--ok); transition: height .25s ease-in-out; }
-.week-label { margin-top: 6px; font-size: .9rem; color: var(--muted); }
-.legend { margin-top: 10px; color: var(--muted); font-size: .9rem; display: flex; align-items: center; gap: 8px; }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-.dot-green { background: var(--ok); }
-.dot-amber { background: var(--warn); }
-
-/* ---------- Mascota y Sprite ---------- */
-.mascota-card { overflow: hidden; }
-.mascota-box { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.mascota-info { display: flex; flex-direction: column; gap: 6px; }
-.mascota-level { font-weight: 700; font-size: 1.1rem; }
-.mascota-note { color: var(--muted); }
-
-.sprite { image-rendering: auto; border-radius: 12px; }
-
-/* ---------- Pista con caminante ---------- */
-.track { position: relative; width: 100%; height: 72px; background: #eef2f7; border-radius: 9999px; overflow: hidden; display: flex; align-items: center; }
-[data-theme="dark"] .track { background: #192233; }
-.track-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, var(--ok), #5ad08b); width: 0%; transition: width .25s ease-in-out; opacity: .25; }
-.walker { --p: 0; position: absolute; left: calc(var(--p) * 1% - 32px); top: 50%; transform: translateY(-50%); transition: left .25s ease-in-out; }
+/* Emoji fallback anim */
+@keyframes floatY{0%{transform:translateY(-6px)}50%{transform:translateY(2px)}100%{transform:translateY(-6px)}}
