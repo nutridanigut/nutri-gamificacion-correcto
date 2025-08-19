@@ -1,6 +1,3 @@
-// src/components/LevelMap.jsx
-import { WEEK_LABELS } from "../utils/date";
-
 export default function LevelMap({ streak, thresholds = [3,7,10,14,15,18,21] }) {
   const max = 21;
   const cells = Array.from({ length: max }, (_, i) => i + 1);

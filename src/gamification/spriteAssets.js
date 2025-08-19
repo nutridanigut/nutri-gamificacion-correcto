@@ -1,35 +1,30 @@
-// src/gamification/spriteAssets.js
+import evo1 from "../assets/sprites/evolution-1.png";
+import evo2 from "../assets/sprites/evolution-2.png";
+import evo3 from "../assets/sprites/evolution-3.png";
+import evo4 from "../assets/sprites/evolution-4.png";
+import evo5 from "../assets/sprites/evolution-5.png";
+import evo6 from "../assets/sprites/evolution-6.png";
+import evo7 from "../assets/sprites/evolution-7.png";
 
-/**
- * Cuando tengas tus PNG de 64x64 por etapa (4 frames c/u),
- * descomenta e importa así:
- *
- * import base0 from "../assets/mascota/base_0.png";
- * import base1 from "../assets/mascota/base_1.png";
- * import base2 from "../assets/mascota/base_2.png";
- * import base3 from "../assets/mascota/base_3.png";
- *
- * export const FRAMES = {
- *   base: [base0, base1, base2, base3],
- *   d3:   [...],
- *   d7:   [...],
- *   d10:  [...],
- *   d14:  [...],
- *   d15:  [...],
- *   d18:  [...],
- *   d21:  [...],
- * };
- */
-
-// Por ahora no usamos imágenes; devolvemos vacío y App
-// caerá al "emoji sprite" como fallback.
-export const FRAMES = {
-  base: [],
-  d3:   [],
-  d7:   [],
-  d10:  [],
-  d14:  [],
-  d15:  [],
-  d18:  [],
-  d21:  [],
+export const SPRITES = {
+  "evolution-1": evo1,
+  "evolution-2": evo2,
+  "evolution-3": evo3,
+  "evolution-4": evo4,
+  "evolution-5": evo5,
+  "evolution-6": evo6,
+  "evolution-7": evo7,
 };
+
+// umbrales de racha → sprite
+export const STAGE_THRESHOLDS = [3,7,10,14,15,18,21];
+
+export function streakToStageKey(streak){
+  if(streak >= 18) return "evolution-7";
+  if(streak >= 15) return "evolution-6";
+  if(streak >= 14) return "evolution-5";
+  if(streak >= 10) return "evolution-4";
+  if(streak >= 7) return "evolution-3";
+  if(streak >= 3) return "evolution-2";
+  return "evolution-1";
+}
