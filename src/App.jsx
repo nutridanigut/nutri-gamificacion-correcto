@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
+import { Sun, Moon } from "lucide-react";
 import "./style.css";
 import { todayKey, todayIdx, hhmmToMin, WEEK_LABELS } from "./utils/date";
 import { REWARDS, randomLoot, STAGE_THRESHOLDS } from "./gamification/rewards";
-import LevelMap from "./components/LevelMap";
-import RewardCard from "./components/RewardCard";
 import Mascota from "./components/Mascota";
 import Walker from "./components/Walker";
 import { getJSON, setJSON } from "./utils/storage";
+
+const LevelMap = lazy(() => import("./components/LevelMap"));
+const RewardCard = lazy(() => import("./components/RewardCard"));
+const WeeklyChart = lazy(() => import("./components/WeeklyChart"));
 
 /** ----- Config base ----- */
 const ALL_MEALS = [
@@ -93,6 +96,8 @@ function App() {
     const arr = getJSON("weeklyData", [0,0,0,0,0,0,0]);
     return Array.isArray(arr) && arr.length === 7 ? arr : [0,0,0,0,0,0,0];
   });
+
+  const [showChart, setShowChart] = useState(false);
 
   /** Inventario y recompensas */
   const [inventory, setInventory] = useState(() => getJSON("inventory", []));
@@ -223,7 +228,9 @@ function App() {
       <header className="header">
         <h1>🌱 Progreso Nutricional</h1>
         <div className="header-actions">
-          <button className="ghost" aria-label="Cambiar tema" onClick={() => setDark(d=>!d)}>{dark ? "☀️ Claro" : "🌙 Oscuro"}</button>
+          <button className="ghost" aria-label="Cambiar tema" onClick={() => setDark(d=>!d)}>
+            {dark ? <Sun size={16} /> : <Moon size={16} />} {dark ? "Claro" : "Oscuro"}
+          </button>
           <button className="ghost" aria-label="Alternar modo Pro" onClick={() => setProMode(v=>!v)}>{proMode ? "🔓 Pro" : "🔒 Pro"}</button>
         </div>
       </header>
@@ -356,14 +363,18 @@ function App() {
       {/* MAPA DE NIVELES */}
       <div className="card">
         <h2>🗺️ Mapa de niveles (1–21)</h2>
-        <LevelMap streak={streak} thresholds={STAGE_THRESHOLDS}/>
+        <Suspense fallback={<div className="muted">Cargando…</div>}>
+          <LevelMap streak={streak} thresholds={STAGE_THRESHOLDS} />
+        </Suspense>
       </div>
 
       {/* RECOMPENSA DEL DÍA */}
       {todaysReward && (
         <div className="card">
           <h2>🎁 Recompensa por hito</h2>
-          <RewardCard reward={todaysReward} claimed={rewardClaimed} onClaim={claimReward}/>
+          <Suspense fallback={<div className="muted">Cargando…</div>}>
+            <RewardCard reward={todaysReward} claimed={rewardClaimed} onClaim={claimReward} />
+          </Suspense>
         </div>
       )}
 
@@ -385,15 +396,26 @@ function App() {
       {/* HISTORIAL SEMANAL */}
       <div className="card">
         <h2>📅 Historial semanal</h2>
-        <div className="levelmap">
-          {weeklyData.map((val,i)=>(
-            <div key={i} className="lm-cell done" style={{height:60}}>
-              <div className="lm-num">{WEEK_LABELS[i]}</div>
-              <div className="muted">{val}%</div>
+        <button className="link" onClick={() => setShowChart(s => !s)} aria-label="Ver gráfico">
+          {showChart ? "Ver tabla" : "Ver gráfico"}
+        </button>
+        {showChart ? (
+          <Suspense fallback={<div className="muted">Cargando…</div>}>
+            <WeeklyChart data={weeklyData} />
+          </Suspense>
+        ) : (
+          <>
+            <div className="levelmap">
+              {weeklyData.map((val, i) => (
+                <div key={i} className="lm-cell done" style={{ height: 60 }}>
+                  <div className="lm-num">{WEEK_LABELS[i]}</div>
+                  <div className="muted">{val}%</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="muted" style={{marginTop:8}}>Verde ≥60%, ámbar &lt;60%.</div>
+            <div className="muted" style={{ marginTop: 8 }}>Verde ≥60%, ámbar &lt;60%.</div>
+          </>
+        )}
       </div>
 
       {/* TIP DEL DÍA */}
@@ -404,16 +426,4 @@ function App() {
     </div>
   );
 }
-codex/fix-multiple-export-errors-in-app.jsx
-
-codex/fix-build-errors-in-app.jsx
-
-codex/fix-app.jsx-export-issues-for-vercel-deployment
 export default App;
-
- codex/fix-vite-build-and-prepare-for-vercel-deploy
-
- main
-
- main
- main
