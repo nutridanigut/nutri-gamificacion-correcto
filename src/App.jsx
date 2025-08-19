@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import "./style.css";
 import { todayKey, todayIdx, hhmmToMin, WEEK_LABELS } from "./utils/date";
-import { REWARDS, randomLoot, STAGE_THRESHOLDS, streakToStageKey } from "./gamification/rewards";
-import SpriteFrames from "./components/SpriteFrames";
+import { REWARDS, randomLoot, STAGE_THRESHOLDS } from "./gamification/rewards";
 import LevelMap from "./components/LevelMap";
 import RewardCard from "./components/RewardCard";
-import { FRAMES } from "./gamification/spriteAssets";
+import Mascota from "./components/Mascota";
+import Walker from "./components/Walker";
+import { getJSON, setJSON } from "./utils/storage";
 
 /** ----- Config base ----- */
 const ALL_MEALS = [
@@ -19,6 +20,7 @@ const ALL_MEALS = [
 
 const TIPS_LOW  = ["🌱 Pequeños pasos → grandes cambios", "💧 Bebe agua durante el día", "🧠 Si fallas hoy, retoma mañana", "🍎 Suma 1 fruta"];
 const TIPS_HIGH = ["💪 ¡Excelente constancia!", "🥗 Varía colores/vegetales", "🚶 10–15 min de movimiento", "🧩 Mantén tu racha"];
+
 function getMedal(streak) {
   if (streak >= 30) return { name: "Oro", emoji: "🥇", need: 30 };
   if (streak >= 14) return { name: "Plata", emoji: "🥈", need: 14 };
@@ -47,65 +49,57 @@ function App() {
 
   /** Qué comidas cuentan */
   const [enabledMeals, setEnabledMeals] = useState(() => {
-    const saved = localStorage.getItem("enabledMeals");
-    if (saved) return JSON.parse(saved);
+    const saved = getJSON("enabledMeals", null);
+    if (saved) return saved;
     return ALL_MEALS.reduce((acc, m) => ({ ...acc, [m.key]: m.key !== "colacion3" }), {});
   });
-  useEffect(() => localStorage.setItem("enabledMeals", JSON.stringify(enabledMeals)), [enabledMeals]);
+  useEffect(() => setJSON("enabledMeals", enabledMeals), [enabledMeals]);
 
   /** Horarios */
   const [mealTimes, setMealTimes] = useState(() => {
-    const saved = localStorage.getItem("mealTimes");
-    if (saved) return JSON.parse(saved);
+    const saved = getJSON("mealTimes", null);
+    if (saved) return saved;
     const base = ALL_MEALS.reduce((acc, m) => ({ ...acc, [m.key]: m.defaultTime }), {});
-    localStorage.setItem("mealTimes", JSON.stringify(base));
+    setJSON("mealTimes", base);
     return base;
   });
-  useEffect(()=> localStorage.setItem("mealTimes", JSON.stringify(mealTimes)), [mealTimes]);
+  useEffect(()=> setJSON("mealTimes", mealTimes), [mealTimes]);
 
   /** Estado del día */
   const [mealsDone, setMealsDone] = useState(() => {
     const sd = localStorage.getItem("mealsDate");
-    const sm = localStorage.getItem("mealsDone");
+    const sm = getJSON("mealsDone", null);
     if (!sm || sd !== todayKey()) {
       const empty = ALL_MEALS.reduce((acc,m)=>({ ...acc, [m.key]: false }),{});
-      localStorage.setItem("mealsDone", JSON.stringify(empty));
+      setJSON("mealsDone", empty);
       localStorage.setItem("mealsDate", todayKey());
       return empty;
     }
-    return JSON.parse(sm);
+    return sm;
   });
   useEffect(() => {
-    localStorage.setItem("mealsDone", JSON.stringify(mealsDone));
+    setJSON("mealsDone", mealsDone);
     localStorage.setItem("mealsDate", todayKey());
   }, [mealsDone]);
 
   /** Meta / racha / puntos / semanal */
-  const [goal, setGoal] = useState(() => Number(localStorage.getItem("goal") || 100));
-  useEffect(()=>localStorage.setItem("goal", String(goal)),[goal]);
+  const [goal, setGoal] = useState(() => Number(getJSON("goal", 100)));
+  useEffect(()=>setJSON("goal", goal),[goal]);
 
-  const [streak, setStreak] = useState(() => Number(localStorage.getItem("streak") || 0));
-  const [points, setPoints] = useState(() => Number(localStorage.getItem("points") || 0));
+  const [streak, setStreak] = useState(() => Number(getJSON("streak", 0)));
+  const [points, setPoints] = useState(() => Number(getJSON("points", 0)));
 
   const [weeklyData, setWeeklyData] = useState(() => {
-    try {
-      const arr = JSON.parse(localStorage.getItem("weeklyData") || "[]");
-      return Array.isArray(arr) && arr.length === 7 ? arr : [0,0,0,0,0,0,0];
-    } catch { return [0,0,0,0,0,0,0]; }
+    const arr = getJSON("weeklyData", [0,0,0,0,0,0,0]);
+    return Array.isArray(arr) && arr.length === 7 ? arr : [0,0,0,0,0,0,0];
   });
 
   /** Inventario y recompensas */
-  const [inventory, setInventory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("inventory") || "[]"); }
-    catch { return []; }
-  });
-  useEffect(()=>localStorage.setItem("inventory", JSON.stringify(inventory)),[inventory]);
+  const [inventory, setInventory] = useState(() => getJSON("inventory", []));
+  useEffect(()=>setJSON("inventory", inventory),[inventory]);
 
-  const [claimed, setClaimed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("claimedRewards") || "{}"); }
-    catch { return {}; }
-  });
-  useEffect(()=>localStorage.setItem("claimedRewards", JSON.stringify(claimed)),[claimed]);
+  const [claimed, setClaimed] = useState(() => getJSON("claimedRewards", {}));
+  useEffect(()=>setJSON("claimedRewards", claimed),[claimed]);
 
   /** Derivados */
   const activeKeys = useMemo(() => ALL_MEALS.filter(m => enabledMeals[m.key]).map(m => m.key), [enabledMeals]);
@@ -125,7 +119,7 @@ function App() {
     const idx = todayIdx();
     const arr = [...weeklyData]; arr[idx] = percent;
     setWeeklyData(arr);
-    localStorage.setItem("weeklyData", JSON.stringify(arr));
+    setJSON("weeklyData", arr);
   }, [percent]); // eslint-disable-line
 
   /** Racha/puntos automáticos (si no simulo) */
@@ -137,8 +131,8 @@ function App() {
       const ns = streak + 1;
       const np = points + 2;
       setStreak(ns); setPoints(np);
-      localStorage.setItem("streak", String(ns));
-      localStorage.setItem("points", String(np));
+      setJSON("streak", ns);
+      setJSON("points", np);
       localStorage.setItem("lastDay", today);
 
       // Cofre cada 3 días de racha
@@ -198,7 +192,7 @@ function App() {
   const [simPercent, setSimPercent] = useState(percent);
   function applySimulation(){
     setStreak(simStreak);
-    localStorage.setItem("streak", String(simStreak));
+    setJSON("streak", simStreak);
     const total = Math.max(1, activeKeys.length);
     const need = Math.round((simPercent/100)*total);
     const newDone = ALL_MEALS.reduce((acc,m,i)=>{
@@ -207,10 +201,10 @@ function App() {
     setMealsDone(newDone);
   }
 
-  /** Evolución de mascota */
-  const evoKey = streakToStageKey(streak);
-  const frames = FRAMES[evoKey] && FRAMES[evoKey].length ? FRAMES[evoKey] : FRAMES.base;
-  const progressStyle = { "--p": percent };
+  /** Selector de evolución (Pro) */
+  const PREVIEW_STAGES = [0,3,7,10,14,18,21];
+  const [preview, setPreview] = useState(null); // streak para previsualizar
+  const displayStreak = preview ?? streak;
 
   /** Recompensa del día (si hay hito) */
   const todaysReward = REWARDS.find(r => r.day === streak);
@@ -229,8 +223,8 @@ function App() {
       <header className="header">
         <h1>🌱 Progreso Nutricional</h1>
         <div className="header-actions">
-          <button className="ghost" onClick={() => setDark(d=>!d)}>{dark ? "☀️ Claro" : "🌙 Oscuro"}</button>
-          <button className="ghost" onClick={() => setProMode(v=>!v)}>{proMode ? "🔓 Pro" : "🔒 Pro"}</button>
+          <button className="ghost" aria-label="Cambiar tema" onClick={() => setDark(d=>!d)}>{dark ? "☀️ Claro" : "🌙 Oscuro"}</button>
+          <button className="ghost" aria-label="Alternar modo Pro" onClick={() => setProMode(v=>!v)}>{proMode ? "🔓 Pro" : "🔒 Pro"}</button>
         </div>
       </header>
 
@@ -245,12 +239,9 @@ function App() {
       <div className="card">
         <h2>🐻 Tu Mascota</h2>
         <div className="row" style={{ alignItems:"center" }}>
-          <SpriteFrames frames={frames} w={128} h={128} fps={8} play={true} />
+          <Mascota streak={displayStreak} size={128} speed={1} />
           <div>
             <div style={{ fontWeight:700 }}>Racha: {streak} días</div>
-            <div className="muted">
-              Etapa: <b>{evoKey === "base" ? "Osito" : evoKey.toUpperCase()}</b>
-            </div>
           </div>
         </div>
       </div>
@@ -258,13 +249,9 @@ function App() {
       {/* PISTA (camina según % del día) */}
       <div className="card">
         <h2>🚶 Progreso del día (tu personaje camina)</h2>
-        <div className="track">
-          <div className="track-fill" style={{ width: `${percent}%` }} />
-          <div className="walker" style={progressStyle}>
-            <SpriteFrames frames={frames} w={64} h={64} fps={8} play={true} />
-          </div>
-        </div>
+        <Walker percent={percent} streak={displayStreak} size={64} speed={1} />
         <p><b>{percent}%</b> del día</p>
+        <p className="muted">El % del día se calcula sobre tus comidas activas.</p>
       </div>
 
       {/* MODO PRO (config + simuladores) */}
@@ -298,7 +285,7 @@ function App() {
               <input type="number" min={0} max={100} value={simPercent} onChange={e=>setSimPercent(Math.min(100, Math.max(0, Number(e.target.value||0))))}/>
             </div>
 
-            <button className="btn" onClick={applySimulation}>Aplicar simulación</button>
+            <button className="btn" aria-label="Aplicar simulación" onClick={applySimulation}>Aplicar simulación</button>
           </div>
 
           <div className="row" style={{marginTop:10}}>
@@ -306,6 +293,15 @@ function App() {
             <button className="ghost" onClick={()=>applyPreset(4)}>Preset 4</button>
             <button className="ghost" onClick={()=>applyPreset(5)}>Preset 5</button>
             <button className="ghost" onClick={()=>applyPreset(6)}>Preset 6</button>
+          </div>
+
+          <div className="row" style={{marginTop:10}}>
+            {PREVIEW_STAGES.map((s,i)=>(
+              <button key={s} className="ghost" onClick={()=>setPreview(s)} aria-label={`Ver evolución ${i+1}`}>Evo {i+1}</button>
+            ))}
+            {preview !== null && (
+              <button className="link" onClick={()=>setPreview(null)} aria-label="Cerrar previsualización">Cerrar</button>
+            )}
           </div>
         </div>
       )}
@@ -408,6 +404,13 @@ function App() {
     </div>
   );
 }
+codex/fix-build-errors-in-app.jsx
 
+codex/fix-app.jsx-export-issues-for-vercel-deployment
 export default App;
+=======
+ codex/fix-vite-build-and-prepare-for-vercel-deploy
 
+ main
+
+ main
