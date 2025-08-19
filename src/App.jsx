@@ -26,7 +26,7 @@ function getMedal(streak) {
   return null;
 }
 
-export default function App() {
+function App() {
   /** Tema */
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   useEffect(() => {
@@ -405,27 +405,6 @@ export default function App() {
         <h2>💡 Tip del día</h2>
         <p>{tip}</p>
       </div>
-    </div>
-  );
-}
-
-import React from "react";
-import "./style.css"; // asegúrate de importar el CSS si no está ya
-
-function App() {
-  return (
-    <div className="App">
-      <h1>Mi mascota</h1>
-
-      {/* Aquí va el osito animado */}
-      <div
-        className="mascota-sprite"
-        style={{
-          backgroundImage: "url('/assets/mascota/evolution-1.png')", // ruta a tu spritesheet
-          "--size": "128px",   // tamaño que quieras mostrar
-          "--speed": "1s"      // velocidad de la animación
-        }}
-      />
     </div>
   );
 }
