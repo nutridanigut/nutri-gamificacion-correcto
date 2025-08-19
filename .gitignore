@@ -1,3 +1,4 @@
+codex/fix-build-errors-in-app.jsx
 node_modules
 .vite
 dist
@@ -11,3 +12,10 @@ yarn-error.log*
 # Local environment
 .env
 
+
+node_modules/
+dist/
+codex/fix-vite-build-and-prepare-for-vercel-deploy
+
+.DS_Store
+main
