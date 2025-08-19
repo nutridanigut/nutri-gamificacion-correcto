@@ -404,3 +404,7 @@ export default function App() {
     </div>
   );
 }
+ codex/fix-vite-build-and-prepare-for-vercel-deploy
+
+
+ main
