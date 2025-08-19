@@ -2,6 +2,10 @@
 // Helpers to persist JSON data safely in localStorage.
 
 export function getJSON(key, fallback) {
+  if (typeof key !== 'string') {
+    console.warn('getJSON: key must be a string');
+    return fallback;
+  }
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
@@ -12,6 +16,10 @@ export function getJSON(key, fallback) {
 }
 
 export function setJSON(key, value) {
+  if (typeof key !== 'string') {
+    console.warn('setJSON: key must be a string');
+    return;
+  }
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {

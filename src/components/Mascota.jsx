@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { streakToStageKey } from "../gamification/rewards";
-import { SPRITES } from "../gamification/spriteAssets";
+
+const useBadges = import.meta.env.VITE_USE_BADGES_INSTEAD_OF_SPRITES === "true";
 
 /**
  * Mascota animada mediante spritesheet de 4 frames horizontales.
@@ -10,10 +11,25 @@ import { SPRITES } from "../gamification/spriteAssets";
  *  - speed: duración de la animación en segundos
  */
 export default function Mascota({ streak = 0, size = 128, speed = 1, className = "" }) {
+  const [sprites, setSprites] = useState(null);
+
+  useEffect(() => {
+    if (!useBadges) {
+      import("../gamification/spriteAssets").then((m) => setSprites(m.SPRITES));
+    }
+  }, []);
+
   const sheet = useMemo(() => {
+    if (useBadges || !sprites) return null;
     const key = streakToStageKey(streak);
-    return SPRITES[key] || SPRITES.base;
-  }, [streak]);
+    return sprites[key] || sprites.base;
+  }, [streak, sprites]);
+
+  if (useBadges) {
+    return <div className={`mascota-badge ${className}`} aria-label="mascota">🐻</div>;
+  }
+
+  if (!sheet) return null;
 
   const style = {
     "--size": `${size}px`,
