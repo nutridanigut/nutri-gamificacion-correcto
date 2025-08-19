@@ -28,7 +28,7 @@ function getMedal(streak) {
   return null;
 }
 
-export default function App() {
+function App() {
   /** Tema */
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   useEffect(() => {
@@ -406,7 +406,11 @@ export default function App() {
 }
 codex/fix-build-errors-in-app.jsx
 
+codex/fix-app.jsx-export-issues-for-vercel-deployment
+export default App;
+=======
  codex/fix-vite-build-and-prepare-for-vercel-deploy
 
+ main
 
  main
