@@ -1,3 +1,7 @@
+codex/fix-multiple-export-errors-in-app.jsx
+node_modules/
+dist/
+
 codex/fix-app.jsx-export-issues-for-vercel-deployment
 node_modules/
 dist/
@@ -34,3 +38,4 @@ codex/fix-vite-build-and-prepare-for-vercel-deploy
 .DS_Store
 main
  
+ main
