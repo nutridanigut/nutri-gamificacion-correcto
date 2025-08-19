@@ -409,26 +409,3 @@ export default function App() {
   );
 }
 
-import React from "react";
-import "./style.css"; // asegúrate de importar el CSS si no está ya
-
-function App() {
-  return (
-    <div className="App">
-      <h1>Mi mascota</h1>
-
-      {/* Aquí va el osito animado */}
-      <div
-        className="mascota-sprite"
-        style={{
-          backgroundImage: "url('/assets/mascota/evolution-1.png')", // ruta a tu spritesheet
-          "--size": "128px",   // tamaño que quieras mostrar
-          "--speed": "1s"      // velocidad de la animación
-        }}
-      />
-    </div>
-  );
-}
-
-export default App;
-
