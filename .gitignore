@@ -1,2 +1,41 @@
+codex/fix-multiple-export-errors-in-app.jsx
 node_modules/
 dist/
+
+codex/fix-app.jsx-export-issues-for-vercel-deployment
+node_modules/
+dist/
+
+
+codex/fix-build-errors-in-app.jsx
+node_modules
+.vite
+dist
+# Build output
+build
+main
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+codex/fix-app.jsx-export-issues-for-vercel-deployment
+# Local env files
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# Local environment
+.env
+
+
+node_modules/
+dist/
+codex/fix-vite-build-and-prepare-for-vercel-deploy
+
+.DS_Store
+main
+ 
+ main

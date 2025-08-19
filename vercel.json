@@ -1,0 +1,16 @@
+{
+  "builds": [
+codex/fix-app.jsx-export-issues-for-vercel-deployment
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
+
+    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+ main
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
