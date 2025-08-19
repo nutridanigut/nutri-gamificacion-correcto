@@ -404,6 +404,8 @@ export default function App() {
     </div>
   );
 }
+codex/fix-build-errors-in-app.jsx
+
  codex/fix-vite-build-and-prepare-for-vercel-deploy
 
 
