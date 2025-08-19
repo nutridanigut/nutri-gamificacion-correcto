@@ -71,3 +71,22 @@ input[type="number"],input[type="time"],input[type="text"]{
 
 /* Emoji fallback anim */
 @keyframes floatY{0%{transform:translateY(-6px)}50%{transform:translateY(2px)}100%{transform:translateY(-6px)}}
+
+
+/* Mascota: anima un spritesheet de 4 frames 64x64 en fila */
+.mascota-sprite{
+  width: var(--size, 128px);
+  height: var(--size, 128px);
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-size: 400% 100%; /* 4 frames horizontales */
+  background-position: 0% 0%;
+  animation: sprite-walk var(--speed, 8s) steps(4) infinite;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,.25));
+}
+
+@keyframes sprite-walk {
+  from { background-position: 0% 0%; }
+  to   { background-position: 100% 0%; }
+}
+
